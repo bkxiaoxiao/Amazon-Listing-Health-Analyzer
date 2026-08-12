@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Amazon Listing Health Analyzer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="analyzer-container">
+    <!-- Header -->
+    <header class="main-header">
+      <div class="logo-area">
+        <svg class="icon-logo" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+        </svg>
+        <h1 id="title-extension">Amazon Listing Analyzer</h1>
+      </div>
+      <div class="header-controls">
+        <button id="lang-switch-btn" class="lang-switch-btn">EN</button>
+        <div class="profile-selector">
+          <label for="category-profile" id="lbl-category-profile">Category:</label>
+          <select id="category-profile">
+            <option value="auto" id="opt-auto">Auto-Detect</option>
+            <option value="standard" id="opt-standard">Standard Goods</option>
+            <option value="electronics" id="opt-electronics">Consumer Electronics</option>
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content State (Not Amazon Page vs Scanning vs Score) -->
+    <div id="state-not-amazon" class="state-panel hidden">
+      <div class="msg-box info">
+        <svg class="msg-icon" viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <h3>Ready to Scan</h3>
+        <p>Please open a product detail page on any global Amazon marketplace (e.g., amazon.com, amazon.co.uk, amazon.cn) to begin analysis.</p>
+      </div>
+    </div>
+
+    <div id="state-scanning" class="state-panel hidden">
+      <div class="spinner"></div>
+      <p>Crawling product attributes and performing canvas pixel analysis on the main image...</p>
+    </div>
+
+    <div id="state-analyzed" class="state-panel">
+      <!-- Summary Dashboard Card -->
+      <section class="dashboard-card">
+        <div class="gauge-and-grade">
+          <div class="gauge-container">
+            <svg class="progress-ring" width="100" height="100">
+              <circle class="progress-ring-bg" stroke="#f1f5f9" stroke-width="8" fill="transparent" r="42" cx="50" cy="50" />
+              <circle class="progress-ring-bar" stroke="#10b981" stroke-dasharray="263.89" stroke-dashoffset="263.89" stroke-width="8" stroke-linecap="round" fill="transparent" r="42" cx="50" cy="50" />
+            </svg>
+            <div class="score-text">
+              <span id="score-number">--</span>
+              <span class="score-label">Health Score</span>
+            </div>
+          </div>
+          <div class="grade-badge" id="grade-badge">
+            <span class="grade-letter" id="grade-letter">-</span>
+            <span class="grade-text" id="grade-text">Gathering...</span>
+          </div>
+        </div>
+        <div class="quick-stats">
+          <div class="stat-item">
+            <span class="stat-lbl">ASIN Profile</span>
+            <span class="stat-val" id="profile-detected">--</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-lbl">Marketplace</span>
+            <span class="stat-val" id="market-detected">--</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-lbl">Brand Found</span>
+            <span class="stat-val" id="brand-detected" title="Brand string">--</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- CDQ Compliance Ribbon -->
+      <div id="cdq-ribbon" class="cdq-ribbon info">
+        <svg class="cdq-ribbon-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+          <polyline points="2 17 12 22 22 17"></polyline>
+          <polyline points="2 12 12 17 22 12"></polyline>
+        </svg>
+        <span id="cdq-ribbon-text">CDQ Quality: -- (Analyzing...)</span>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="tab-navigation">
+        <button class="tab-btn active" data-tab="tab-overview">Overview</button>
+        <button class="tab-btn" data-tab="tab-images">Images</button>
+        <button class="tab-btn" data-tab="tab-content">Content</button>
+        <button class="tab-btn" data-tab="tab-specs">Specs</button>
+        <button class="tab-btn" data-tab="tab-suggestions">Suggestions (<span id="suggestion-count">0</span>)</button>
+      </nav>
+
+      <!-- Tab Content Area -->
+      <div class="tab-content-container">
+        <!-- Overview Tab -->
+        <div id="tab-overview" class="tab-content-panel active">
+          <div class="overview-list">
+            <div class="overview-item" id="chk-title">
+              <span class="check-icon"></span>
+              <div class="overview-info">
+                <h4>Title compliance</h4>
+                <p id="lbl-title">Checks length, prefix, and repetition.</p>
+              </div>
+            </div>
+            <div class="overview-item" id="chk-images">
+              <span class="check-icon"></span>
+              <div class="overview-info">
+                <h4>Images & Resolution</h4>
+                <p id="lbl-images">Checks counts, background, and zoom capabilities.</p>
+              </div>
+            </div>
+            <div class="overview-item" id="chk-description">
+              <span class="check-icon"></span>
+              <div class="overview-info">
+                <h4>Description & A+</h4>
+                <p id="lbl-description">Checks description text and A+ rich content presence.</p>
+              </div>
+            </div>
+            <div class="overview-item" id="chk-specs">
+              <span class="check-icon"></span>
+              <div class="overview-info">
+                <h4>Specifications fill</h4>
+                <p id="lbl-specs">Evaluates key attribute completeness.</p>
+              </div>
+            </div>
+            <div class="overview-item" id="chk-trust">
+              <span class="check-icon"></span>
+              <div class="overview-info">
+                <h4>Customer ratings & reviews</h4>
+                <p id="lbl-trust">Evaluates reviews volume and rating score.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Images Tab -->
+        <div id="tab-images" class="tab-content-panel">
+          <div class="details-section">
+            <div class="image-preview-block">
+              <img id="img-preview" src="" alt="Listing main image preview" class="hidden">
+              <div class="image-no-preview" id="img-no-preview">No Main Image Detected</div>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Image Count</span>
+              <span class="metric-status" id="met-img-count">--</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Main Image Zoom (>=1600px)</span>
+              <span class="metric-status" id="met-img-zoom">--</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Background Check (Pure White)</span>
+              <span class="metric-status" id="met-img-bg">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Content Tab -->
+        <div id="tab-content" class="tab-content-panel">
+          <div class="details-section">
+            <div class="metric-row">
+              <span class="metric-name">Title Character Count</span>
+              <span class="metric-status" id="met-title-length">--</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Title Starts with Brand</span>
+              <span class="metric-status" id="met-title-brand">--</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Title Repetition Check (2025 Rule)</span>
+              <span class="metric-status" id="met-title-repetition">--</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Bullet Points Count</span>
+              <span class="metric-status" id="met-bullets-count">--</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Product Description Present</span>
+              <span class="metric-status" id="met-has-description">--</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">A+ Rich Content Activated</span>
+              <span class="metric-status" id="met-has-aplus">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Specs Tab -->
+        <div id="tab-specs" class="tab-content-panel">
+          <div class="details-section">
+            <div class="metric-row">
+              <span class="metric-name">Marketplace Leaf Node</span>
+              <span class="metric-status" id="met-leaf-node">--</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Specification Rows (Key Attributes)</span>
+              <span class="metric-status" id="met-specs-count">--</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Rating Score (Trust)</span>
+              <span class="metric-status" id="met-rating">--</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-name">Review Count (Trust)</span>
+              <span class="metric-status" id="met-reviews">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Suggestions Tab -->
+        <div id="tab-suggestions" class="tab-content-panel">
+          <div class="suggestions-list" id="suggestions-list">
+            <!-- Programmatic injection of suggestions -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+      <p>&copy; 2026 Amazon Listing Health Analyzer. Local Sandbox Active.</p>
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
